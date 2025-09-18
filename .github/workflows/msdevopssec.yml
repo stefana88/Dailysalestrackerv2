@@ -20,7 +20,10 @@ jobs:
 
     steps:
 
-      # Checkout your code repository to scan
+    pull_request:
+    branches: ["main"]
+
+     # Checkout your code repository to scan
     - uses: actions/checkout@v3
 
       # Run analyzers
