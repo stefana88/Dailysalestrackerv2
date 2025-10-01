@@ -3,54 +3,51 @@ on:
   push:
     branches:
       - main
- # Triggers the workflow on push or pull request events but only for the main branch
   pull_request:
     branches: ["main"]
-  
+
 jobs:
   sample:
     name: Microsoft Security DevOps
-
-    # Windows and Linux agents are supported
     runs-on: windows-latest
 
     permissions:
       contents: read
       id-token: write
       actions: read
-      # Write access for security-events is only required for customers looking for MSDO results to appear in the codeQL security alerts tab on GitHub (Requires GHAS)
       security-events: write
 
     steps:
+      # Checkout your code repository to scan
+      - uses: actions/checkout@v3
 
-  
-
-     # Checkout your code repository to scan
-    - uses: actions/checkout@v3
-
-      # Run analyzers
-    - name: Run Microsoft Security DevOps
-      uses: microsoft/security-devops-action@latest
-      id: msdo
-      with:
+      # Run MSDO analyzers (IaC misconfigurations)
+      - name: Run Microsoft Security DevOps
+        uses: microsoft/security-devops-action@latest
+        id: msdo
+        with:
           categories: 'IaC'
-          tools: 'checkov,terrascan,trivy'
-    # with:
-      # config: string. Optional. A file path to an MSDO configuration file ('*.gdnconfig').
-      # policy: 'GitHub' | 'microsoft' | 'none'. Optional. The name of a well-known Microsoft policy. If no configuration file or list of tools is provided, the policy may instruct MSDO which tools to run. Default: GitHub.
-      # categories: string. Optional. A comma-separated list of analyzer categories to run. Values: 'code', 'artifacts', 'IaC', 'containers'. Example: 'IaC, containers'. Defaults to all.
-      # languages: string. Optional. A comma-separated list of languages to analyze. Example: 'javascript,typescript'. Defaults to all.
-      # tools: string. Optional. A comma-separated list of analyzer tools to run. Values: 'bandit', 'binskim', 'checkov', 'eslint', 'templateanalyzer', 'terrascan', 'trivy'.
+          tools: 'checkov,terrascan'
 
-      # Upload alerts to the Security tab - required for MSDO results to appear in the codeQL security alerts tab on GitHub (Requires GHAS)
-   # - name: Upload alerts to Security tab
-    #   uses: github/codeql-action/upload-sarif@v3
-     # with:
-      # sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+      # Run Trivy explicitly in filesystem mode for secret scanning
+      - name: Run Trivy for secrets in IaC
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scanners: 'secret'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-secrets.sarif'
 
-      # Upload alerts file as a workflow artifact - required for MSDO results to appear in the codeQL security alerts tab on GitHub (Requires GHAS)
-    # - name: Upload alerts file as a workflow artifact
-    #  uses: actions/upload-artifact@v3
-    #  with:  
-    #    name: alerts
-    #    path: ${{ steps.msdo.outputs.sarifFile }}
+      # Upload MSDO results to Security tab (requires GHAS / Defender for DevOps)
+      - name: Upload MSDO alerts to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+
+      # Upload Trivy secret scan results to Security tab
+      - name: Upload Trivy secret scan
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-secrets.sarif
