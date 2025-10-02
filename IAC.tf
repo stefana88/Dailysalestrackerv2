@@ -70,5 +70,4 @@ resource "azurerm_linux_virtual_machine" "demo_vm" {
   resource_group_name = azurerm_resource_group.demo.name
   size                = "Standard_B1s"
   admin_username      = "azureuser"
-
-  admin_password      = "P@ssword
+  admin_password      = "P@ssword"
