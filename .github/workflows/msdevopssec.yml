@@ -29,14 +29,18 @@ jobs:
           categories: 'IaC'
           tools: 'checkov,terrascan'
 
-      # Install Trivy CLI manually (v0.67.0) on Windows
+      # Install Trivy CLI manually (v0.67.0)
       - name: Install Trivy CLI v0.67.0
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri "https://github.com/aquasecurity/trivy/releases/download/v0.67.0/trivy_0.67.0_windows-64bit.zip" -OutFile trivy.zip
           Expand-Archive trivy.zip -DestinationPath $env:USERPROFILE\trivy
           echo "$env:USERPROFILE\trivy" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          trivy --version
+
+      # Confirm Trivy version (separate step so PATH is reloaded)
+      - name: Check Trivy version
+        shell: pwsh
+        run: trivy --version
 
       # Run Trivy explicitly in filesystem mode for secret scanning
       - name: Run Trivy for secrets in IaC
@@ -49,14 +53,5 @@ jobs:
             --format sarif `
             --output trivy-secrets.sarif .
 
-      # Upload MSDO results to Security tab
-      - name: Upload MSDO alerts to Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
-
-      # Upload Trivy secret scan results to Security tab
-      - name: Upload Trivy secret scan
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-secrets.sarif
+      # Upload MSDO results to Security tab (requires GHAS / Defender for DevOps)
+      - name
