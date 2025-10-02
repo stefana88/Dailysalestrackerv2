@@ -31,7 +31,7 @@ jobs:
 
       # Run Trivy explicitly in filesystem mode for secret scanning
       - name: Run Trivy for secrets in IaC
-        uses: aquasecurity/trivy-action@v0.11.2
+        uses: aquasecurity/trivy-action@v0.11.1
         with:
           scan-type: 'fs'
           scanners: 'secret'
