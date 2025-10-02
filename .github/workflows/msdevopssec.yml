@@ -35,7 +35,7 @@ jobs:
         with:
           scan-type: 'fs'
           scanners: 'secret'
-          severity: 'HIGH,CRITICAL'
+          severity: 'MEDIUM,HIGH,CRITICAL'
           ignore-unfixed: true
           format: 'sarif'
           output: 'trivy-secrets.sarif'
