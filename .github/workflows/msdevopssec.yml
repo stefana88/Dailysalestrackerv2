@@ -54,4 +54,13 @@ jobs:
             --output trivy-secrets.sarif .
 
       # Upload MSDO results to Security tab (requires GHAS / Defender for DevOps)
-      - name
+      - name: Upload MSDO alerts to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+
+      # Upload Trivy secret scan results to Security tab
+      - name: Upload Trivy secret scan
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-secrets.sarif
