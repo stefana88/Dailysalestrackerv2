@@ -47,7 +47,7 @@ jobs:
         shell: pwsh
         run: |
           trivy fs `
-            --scanners secret `
+            --scanners secret --format sarif --output trivy-secrets.sarif .
             --severity MEDIUM,HIGH,CRITICAL `
             --ignore-unfixed `
             --format sarif `
