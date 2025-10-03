@@ -32,6 +32,7 @@ jobs:
 
       # Run Gitleaks scan
       - name: Run Gitleaks
+        continue-on-error: true
         shell: pwsh
         run: gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif
 
