@@ -46,8 +46,7 @@ jobs:
       - name: Run Trivy for secrets in IaC
         shell: pwsh
         run: |
-          - name: Run Trivy for secrets in IaC
-            trivy fs --scanners secret --severity MEDIUM,HIGH,CRITICAL --ignore-unfixed --format sarif --output trivy-secrets.sarif .
+           trivy fs --scanners secret --severity MEDIUM,HIGH,CRITICAL --ignore-unfixed --format sarif --output trivy-secrets.sarif .
 
       # Upload MSDO results to Security tab (requires GHAS / Defender for DevOps)
       - name: Upload MSDO alerts to Security tab
