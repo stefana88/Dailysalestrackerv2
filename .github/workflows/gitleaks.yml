@@ -1,0 +1,42 @@
+name: Gitleaks Secret Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  gitleaks-scan:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write   # needed to upload SARIF
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Install Gitleaks (Windows x64 build)
+      - name: Install Gitleaks
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_windows_x64.zip" -OutFile gitleaks.zip
+          Expand-Archive gitleaks.zip -DestinationPath $env:USERPROFILE\gitleaks
+          echo "$env:USERPROFILE\gitleaks" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # Verify installation
+      - name: Check Gitleaks version
+        shell: pwsh
+        run: gitleaks version
+
+      # Run Gitleaks scan
+      - name: Run Gitleaks
+        shell: pwsh
+        run: gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif
+
+      # Upload SARIF results to GitHub Security tab
+      - name: Upload Gitleaks SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
