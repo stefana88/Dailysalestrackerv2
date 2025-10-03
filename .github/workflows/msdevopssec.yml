@@ -50,4 +50,42 @@ jobs:
       - name: Upload MSDO alerts to Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: ${{
+          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+
+      # Upload Trivy results
+      - name: Upload Trivy secret scan
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-secrets.sarif
+
+      # Install Gitleaks
+      - name: Install Gitleaks
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_windows_x64.zip" -OutFile gitleaks.zip
+          Expand-Archive gitleaks.zip -DestinationPath $env:USERPROFILE\gitleaks
+          echo "$env:USERPROFILE\gitleaks" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      # Create custom Gitleaks config
+      - name: Write Gitleaks config
+        shell: pwsh
+        run: |
+          @"
+          [[rules]]
+          id = "TF_ADMIN_PASSWORD"
+          description = "Hardcoded admin_password in Terraform"
+          regex = '''admin_password\s*=\s*".+"'''
+          tags = ["terraform", "password", "custom"]
+          "@ | Out-File -FilePath gitleaks.toml -Encoding utf8
+
+      # Run Gitleaks with custom rule
+      - name: Run Gitleaks secret scan
+        shell: pwsh
+        continue-on-error: true
+        run: gitleaks detect --config gitleaks.toml --source . --report-format sarif --report-path gitleaks.sarif
+
+      # Upload Gitleaks results
+      - name: Upload Gitleaks secret scan
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
