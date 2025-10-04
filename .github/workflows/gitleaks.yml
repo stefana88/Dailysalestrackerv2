@@ -2,42 +2,58 @@ name: Gitleaks Secret Scan
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
 jobs:
-  gitleaks-scan:
+  gitleaks:
+    name: Run Gitleaks Secret Scanner
     runs-on: windows-latest
-    permissions:
-      contents: read
-      security-events: write   # needed to upload SARIF
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
-      # Install Gitleaks (Windows x64 build)
-      - name: Install Gitleaks
-        shell: pwsh
+      - name: Install Gitleaks (dedicated workflow)
         run: |
-          Invoke-WebRequest -Uri "https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_windows_x64.zip" -OutFile gitleaks.zip
-          Expand-Archive gitleaks.zip -DestinationPath $env:USERPROFILE\gitleaks
-          echo "$env:USERPROFILE\gitleaks" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          choco install gitleaks --yes --no-progress
+          gitleaks version
 
-      # Verify installation
-      - name: Check Gitleaks version
-        shell: pwsh
-        run: gitleaks version
-
-      # Run Gitleaks scan
-      - name: Run Gitleaks
+      - name: Run Gitleaks with tuned ruleset
+        run: |
+          gitleaks detect `
+            --config security/gitleaks.toml `
+            --report-format sarif `
+            --report-path gitleaks.sarif `
+            --no-banner `
+            --redact
         continue-on-error: true
-        shell: pwsh
-        run: gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif
 
-      # Upload SARIF results to GitHub Security tab
-      - name: Upload Gitleaks SARIF
+      # ✅ Upload SARIF to GitHub Security tab (if not a forked PR)
+      - name: Upload SARIF to GitHub Security tab
+        if: >
+          !(
+            github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.fork == true
+          )
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: gitleaks.sarif
+          category: gitleaks
+
+      # ✅ Always export SARIF as artifact (so you can download/use elsewhere)
+      - name: Export SARIF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-sarif
+          path: gitleaks.sarif
